@@ -172,9 +172,13 @@ def scaledata(l, rho, a, da, rho_c, nu, zeta):
 
     l_mesh, rho_mesh = np.meshgrid(l, rho, indexing='ij')
 
-    x = np.power(l_mesh, 1. / nu) * (rho_mesh - rho_c)
-    y = np.power(l_mesh, - zeta / nu) * a
-    dy = np.power(l_mesh, - zeta / nu) * da
+    # x = np.power(l_mesh, 1. / nu) * (rho_mesh - rho_c)
+    # y = np.power(l_mesh, - zeta / nu) * a
+    # dy = np.power(l_mesh, - zeta / nu) * da
+
+    x = np.power(l_mesh, -nu) * (rho_mesh)
+    y = np.power(rho_mesh, zeta) * a
+    dy = np.power(rho_mesh, zeta) * da
 
     return ScaledData(x, y, dy)
 
@@ -601,8 +605,12 @@ def autoscale(l, rho, a, da, rho_c0, nu0, zeta0, x_bounds=None, **kwargs):
     """
 
     def goal_function(x):
+        # my_x, my_y, my_dy = scaledata(
+        #     rho=rho, l=l, a=a, da=da, nu=x[1], zeta=x[2], rho_c=x[0],
+        # )
+
         my_x, my_y, my_dy = scaledata(
-            rho=rho, l=l, a=a, da=da, nu=x[1], zeta=x[2], rho_c=x[0],
+            rho=rho, l=l, a=a, da=da, nu=x[0], zeta=x[1], rho_c=0,
         )
         return quality(
             my_x, my_y, my_dy, x_bounds=x_bounds,
@@ -610,7 +618,8 @@ def autoscale(l, rho, a, da, rho_c0, nu0, zeta0, x_bounds=None, **kwargs):
 
     ret = scipy.optimize.minimize(
         goal_function,
-        [rho_c0, nu0, zeta0],
+        # [rho_c0, nu0, zeta0],
+        [nu0, zeta0],
         method=_minimize_neldermead,
         options={
             'xtol': 1e-2,
@@ -626,7 +635,9 @@ def autoscale(l, rho, a, da, rho_c0, nu0, zeta0, x_bounds=None, **kwargs):
 
     ret['varco'] = varco
     ret['errors'] = errors
-    ret['rho'], ret['nu'], ret['zeta'] = ret['x']
-    ret['drho'], ret['dnu'], ret['dzeta'] = ret['errors']
+    # ret['rho'], ret['nu'], ret['zeta'] = ret['x']
+    ret['nu'], ret['zeta'] = ret['x']
+    # ret['drho'], ret['dnu'], ret['dzeta'] = ret['errors']
+    ret['dnu'], ret['dzeta'] = ret['errors']
 
     return ret
